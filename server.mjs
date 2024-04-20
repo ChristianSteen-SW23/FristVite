@@ -18,6 +18,7 @@ app.use(cors());
 app.get('/', (req, res) => {
     // res.send('Hello World!');
     // Alternatively, serve an HTML file:
+    console.log("Someone asked for some shit")
     res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
 });
 // Serve static files from the 'dist' directory
