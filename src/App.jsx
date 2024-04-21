@@ -1,36 +1,53 @@
 /* eslint-disable react/prop-types */
-import { useState, useRef } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useState, useRef, useEffect } from 'react'
+//import reactLogo from './assets/react.svg'
+//import viteLogo from '/vite.svg'
 //import './App.css'
 import { Todo } from "./todoClass.js"
 
-let startTodoList;
-if(localStorage.getItem("todoList") !== null){
-  startTodoList = JSON.parse(localStorage.getItem("todoList"));
+
+let startUserName;
+if(localStorage.getItem("userName") !== null){
+  startUserName = localStorage.getItem("userName");
 } else{
-  startTodoList=[new Todo({}),new Todo({ name: "Task 1", task: "Complete task 1", lastEdit: "Today" }),new Todo({ name: "Task 1", task: "Complete task 1", lastEdit: "Today" }),new Todo({ name: "Task 1", task: "Complete task 1", lastEdit: "Today" }),new Todo({ name: "Task 1", task: "Complete task 1", lastEdit: "Today" }),new Todo({ name: "Task 1", task: "Complete task 1", lastEdit: "Today" })]
+  startUserName=""
 }
 
 function App() {
-  const [count, setCount] = useState(0)
-  const [displayName, setDisplayName] = useState("")
+  const [userName, setUserName] = useState(startUserName)
   const [todoName, setTodoName] = useState("")
   const [todoTask, setTodoTask] = useState("")
-  const [todos, setTodos] = useState(startTodoList)
+  const [todos, setTodos] = useState([])
   const [todoLastEdit, setTodoLastEdit] = useState("")
   const [todoIndex, setTodoIndex] = useState(2)
 
-  const userName = useRef("Christian")
-  
+  useEffect(()=>{
+    console.log("Get data")
+    getData("/todoList").then((data)=>{
+      console.log("Received data:", data);
+      setTodos(data)
+    })
+    console.table(todos)
+  }, [])
+
+  useEffect(()=>{
+    
+  }, [userName])
+
   function addTodo(){
     let todosCopy = [...todos];
     todosCopy.push(new Todo({}))
     setTodos(todosCopy)
+
+    postData(todosCopy)
   }
 
   return (
     <>
+      <NamePopUp 
+        setUserName={setUserName}
+        userName={userName}
+      />
       <TodoPopUp 
         userName={userName}
         todos={todos}
@@ -49,7 +66,7 @@ function App() {
       <div className='container text-center'>
         <div className='row justify-content-center'>
           <div className='col-8 p-3 d-grid'>
-            <div className="bg-primary text-white p-3 btn" onClick={()=>{addTodo();}}>
+            <div className="bg-primary text-white p-3 btn" onClick={()=>{addTodo()}}>
               <h2 className="mb-0"><b>Todo List:</b></h2>
             </div>
           </div>
@@ -82,7 +99,7 @@ function DisplayTodoList(props){
   }
   return(
     <ul className="list-group list-group-flush">
-      {props.todos.map((todo,index) => 
+      {props.todos?.map((todo,index) => 
         <li key={index} className="list-group-item list-group-item-action list-group-item-primary" data-bs-toggle="modal" data-bs-target={"#modal"} onClick={()=>{showTodo(index);}}>{"Todo: "+[todo.name]}</li>
        )
       }
@@ -91,6 +108,7 @@ function DisplayTodoList(props){
   )
 }
 
+
 function TodoPopUp(props){
   function saveTodos(){
     let todosCopy = [...props.todos];
@@ -98,6 +116,7 @@ function TodoPopUp(props){
     todosCopy[props.todoIndex].task = props.todoTask;
     todosCopy[props.todoIndex].lastEdit = props.userName.current;
     props.setTodos(todosCopy)
+    postData(props.todos);
   }
   function deleteTodo(){
     let todosCopy = [...props.todos];
@@ -118,8 +137,8 @@ function TodoPopUp(props){
               <p>Last edit: {props.todoLastEdit}</p>
             </div>
             <div className='modal-footer'>
-              <button type="button" className="btn btn-danger" data-bs-dismiss="modal" onClick={()=>{deleteTodo();}}>Delete Todo</button>
-              <button type="button" className="btn btn-danger" data-bs-dismiss="modal" onClick={()=>{saveTodos();}}>Save Todo</button>
+              <button type="button" className="btn btn-danger" data-bs-dismiss="modal" onClick={()=>{deleteTodo();deleteData(props.todoIndex);}}>Delete Todo</button>
+              <button type="button" className="btn btn-success" data-bs-dismiss="modal" onClick={()=>{saveTodos();}}>Save Todo</button>
               <button type="button" className="btn btn-primary" data-bs-dismiss="modal">Close Todo</button>
             </div>
           </div>
@@ -127,6 +146,74 @@ function TodoPopUp(props){
       </div>
     </>
   )
+}
+
+function NamePopUp(props){
+  return(
+    <>
+      <div className={`modal fade ${(props.userName == "") ? `show` : ``}`} id={"nameModal"} aria-hidden="true" data-bs-backdrop="static" aria-labelledby="staticBackdropLabel" style={{display: (props.userName == "") ? `block` : `none`}}>
+        <div className='modal-dialog'>
+          <div className='modal-content'>
+            <div className='modal-header'>
+              <h1>Please type a username</h1>
+            </div>
+            <div className='modal-body'>
+              <label className="text-primary h3" htmlFor="name">Username:</label>
+              <input className="text-primary h3"type="text" placeholder="Set Name" id="name"></input>
+            </div>
+            <div className='modal-footer'>
+              <button type="button" className="btn btn-primary" data-bs-dismiss="modal" 
+                onClick={() => {props.setUserName(document.getElementById('name').value);
+                          localStorage.setItem("userName",document.getElementById('name').value);}
+                  }>Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {(props.userName == "") && (
+        <div className="modal-backdrop fade show" />
+      )}
+    </>
+  )
+}
+
+async function postData(data){
+  try {
+    const res = await fetch("/todoList", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+    //console.table(res.body);
+  } catch(error){
+    console.error("Error then posting: ", error)
+  } 
+}
+
+async function getData(path){
+  try {
+    const res = await fetch(path, {
+      method: "GET",
+    })
+    //console.log(res);
+    const data = await res.json();
+    return data
+  } catch(error){
+    console.error("Error then getting: ", error)
+  } 
+}
+
+async function deleteData(id){
+  try {
+    const res = await fetch(`/todoList/${id}`, {
+      method: "DELETE",
+    })
+    //console.table(res.body);
+  } catch(error){
+    console.error("Error then posting: ", error)
+  } 
 }
 
 export default App
