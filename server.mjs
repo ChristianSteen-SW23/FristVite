@@ -10,8 +10,8 @@ const app = express();
 
 
 // Set server IP address and port
-const serverIP = '127.0.0.1'; // Localhost
-const port = 8000;
+const serverIP = '0.0.0.0'; // Localhost
+const port = 80;
 app.use(cors());
 app.use(express.json())
 
